@@ -97,7 +97,11 @@ function Dashboard() {
         setCurrentUserId(user?.id ?? null);
         setPersonalEvents(events.map(toPersonalEvent));
       } catch (fetchError) {
-        if (!cancelled) setLoadError(fetchError.message);
+        // ponytail: supabase reports "Auth session missing" when signed out —
+        // that's a normal state, not a load failure
+        if (!cancelled && !/auth session missing/i.test(fetchError.message)) {
+          setLoadError(fetchError.message);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
