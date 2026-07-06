@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { calendarDays, calendarPreview } from "../data/mockEvents";
 import { formatEventRow } from "../data/formatEventRow";
-import { supabase } from "../lib/supabaseClient";
+import { createClient } from "../lib/supabase/client";
 
 function Dashboard() {
+const supabase = createClient();
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
