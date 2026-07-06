@@ -73,7 +73,9 @@ function toPersonalEvent(row) {
 }
 
 function Dashboard() {
+
   const [personalEvents, setPersonalEvents] = useState([]);
+
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
