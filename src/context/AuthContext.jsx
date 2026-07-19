@@ -1,11 +1,37 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext(undefined);
 
+// Minimal shared slice of the profiles row that other pieces of the app (the
+// navbar avatar, for example) need to react to without re-fetching the whole
+// profile form. Profile.jsx remains the source of truth for editing.
+async function fetchProfileSlice(userId) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("avatar_url, full_name, username")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
+
+  const refreshProfile = useCallback(async (userId) => {
+    const id = userId ?? session?.user?.id;
+    if (!id) {
+      setProfile(null);
+      return;
+    }
+    const slice = await fetchProfileSlice(id);
+    setProfile(slice);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,6 +54,23 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!session?.user?.id) {
+      setProfile(null);
+      return;
+    }
+
+    fetchProfileSlice(session.user.id).then((slice) => {
+      if (!cancelled) setProfile(slice);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -37,6 +80,8 @@ export function AuthProvider({ children }) {
     user: session?.user ?? null,
     loading,
     signOut,
+    profile,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

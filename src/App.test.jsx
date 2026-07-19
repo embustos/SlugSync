@@ -1,10 +1,16 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { useAuth } from "./context/AuthContext";
+import { useTheme } from "./context/ThemeContext";
 
 vi.mock("./context/AuthContext", () => ({
   useAuth: vi.fn(),
+}));
+
+vi.mock("./context/ThemeContext", () => ({
+  useTheme: vi.fn(),
 }));
 
 vi.mock("./pages/Dashboard", () => ({ default: () => <div>Dashboard Page</div> }));
@@ -17,6 +23,11 @@ describe("App auth gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.location.hash = "";
+    useTheme.mockReturnValue({
+      themePreference: "system",
+      resolvedTheme: "light",
+      setThemePreference: vi.fn(),
+    });
   });
 
   it("shows a loading state and nothing else while auth is resolving", () => {
@@ -51,5 +62,71 @@ describe("App auth gate", () => {
     expect(screen.getByRole("button", { name: "Sign Out" })).toBeInTheDocument();
     expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
     expect(screen.queryByText("Auth Page")).not.toBeInTheDocument();
+  });
+});
+
+describe("Navbar theme control", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.location.hash = "";
+    useAuth.mockReturnValue({
+      session: { user: { email: "test@ucsc.edu" } },
+      loading: false,
+      signOut: vi.fn(),
+    });
+  });
+
+  it("renders an accessible theme button that reflects the current preference", () => {
+    useTheme.mockReturnValue({
+      themePreference: "dark",
+      resolvedTheme: "dark",
+      setThemePreference: vi.fn(),
+    });
+
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: /theme: dark/i })).toBeInTheDocument();
+  });
+
+  it("opens a menu listing Light, Dark, and System and selects an option", async () => {
+    const setThemePreference = vi.fn();
+    useTheme.mockReturnValue({
+      themePreference: "system",
+      resolvedTheme: "light",
+      setThemePreference,
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /theme:/i }));
+
+    expect(screen.getByRole("menu", { name: "Theme options" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /light/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /dark/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /system/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitemradio", { name: /dark/i }));
+
+    expect(setThemePreference).toHaveBeenCalledWith("dark");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("closes the menu when Escape is pressed", async () => {
+    useTheme.mockReturnValue({
+      themePreference: "light",
+      resolvedTheme: "light",
+      setThemePreference: vi.fn(),
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /theme:/i }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });

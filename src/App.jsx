@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Calendar from "./pages/Calendar";
@@ -6,7 +6,84 @@ import Friends from "./pages/Friends";
 import Auth from "./pages/Auth";
 import { useAuth } from "./context/AuthContext";
 import { QuickAddProvider, useQuickAdd } from "./context/QuickAddContext";
-import { initialsFromEmail } from "./lib/displayName";
+import { useTheme } from "./context/ThemeContext";
+import { initialsFromEmail, initialsFromName } from "./lib/displayName";
+
+const THEME_OPTIONS = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
+
+function ThemeToggle() {
+  const { themePreference, resolvedTheme, setThemePreference } = useTheme();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function handlePointerDown(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  function selectTheme(value) {
+    setThemePreference(value);
+    setOpen(false);
+  }
+
+  const currentLabel =
+    THEME_OPTIONS.find((option) => option.value === themePreference)?.label ?? "System";
+
+  return (
+    <div className="theme-toggle" ref={containerRef}>
+      <button
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Theme: ${currentLabel}. Change theme`}
+        className="theme-toggle-button"
+        onClick={() => setOpen((value) => !value)}
+        type="button"
+      >
+        <span aria-hidden="true">{resolvedTheme === "dark" ? "🌙" : "☀️"}</span>
+      </button>
+
+      {open && (
+        <div aria-label="Theme options" className="theme-toggle-menu" role="menu">
+          {THEME_OPTIONS.map((option) => (
+            <button
+              aria-checked={themePreference === option.value}
+              className={`theme-toggle-option${
+                themePreference === option.value ? " is-active" : ""
+              }`}
+              key={option.value}
+              onClick={() => selectTheme(option.value)}
+              role="menuitemradio"
+              type="button"
+            >
+              {option.label}
+              {themePreference === option.value && <span aria-hidden="true">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const NAV_ITEMS = [
   { key: "", label: "Dashboard" },
@@ -30,8 +107,11 @@ function Placeholder({ title, text }) {
   );
 }
 
-function Nav({ route, email, onSignOut }) {
+function Nav({ route, email, profile, onSignOut }) {
   const { openAdd } = useQuickAdd();
+  const initials = profile?.full_name
+    ? initialsFromName(profile.full_name)
+    : initialsFromEmail(email);
 
   function handleAddEvent() {
     // Reuses Dashboard's/Calendar's own add-event flow when either is
@@ -73,8 +153,14 @@ function Nav({ route, email, onSignOut }) {
           Sign Out
         </button>
 
+        <ThemeToggle />
+
         <a className="nav-avatar" href="#/profile" title="Profile">
-          {initialsFromEmail(email)}
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="nav-avatar-img" />
+          ) : (
+            initials
+          )}
         </a>
       </div>
     </nav>
@@ -83,7 +169,7 @@ function Nav({ route, email, onSignOut }) {
 
 function App() {
   const [hash, setHash] = useState(window.location.hash);
-  const { session, loading, signOut } = useAuth();
+  const { session, loading, signOut, profile } = useAuth();
 
   useEffect(() => {
     const onChange = () => setHash(window.location.hash);
@@ -116,7 +202,7 @@ function App() {
   return (
     <QuickAddProvider>
       <div className="app-shell">
-        <Nav route={route} email={session.user?.email} onSignOut={signOut} />
+        <Nav route={route} email={session.user?.email} profile={profile} onSignOut={signOut} />
 
         {route === "calendar" ? (
           <Calendar />
