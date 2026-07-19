@@ -788,8 +788,8 @@ function Dashboard() {
                     className="source-status-badge"
                     style={
                       source.connected
-                        ? { background: "#e8f6ee", color: "#1f8a52" }
-                        : { background: "#f2f3f6", color: "var(--color-text-secondary)" }
+                        ? { background: "var(--color-success-bg)", color: "var(--color-success-text)" }
+                        : { background: "var(--color-surface-soft)", color: "var(--color-text-secondary)" }
                     }
                   >
                     {source.connected ? "Connected" : source.key === "personal" ? "Sign in" : "Error"}
