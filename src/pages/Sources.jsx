@@ -69,23 +69,20 @@ function AddSourceForm({ onAdded }) {
   );
 }
 
-function ConfirmEventsModal({ source, events, onClose, onSaved }) {
-  const [selected, setSelected] = useState(() => new Set(events.map((_, i) => i)));
+function ConfirmEventsModal({ source, events, model, onClose, onSaved }) {
+  const [selected, setSelected] = useState(() => events.map(() => true));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  function toggle(index) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
+  const selectedCount = selected.filter(Boolean).length;
+
+  function toggle(index, checked) {
+    setSelected((prev) => prev.map((value, i) => (i === index ? checked : value)));
   }
 
   async function handleSave() {
     setError("");
-    const chosen = events.filter((_, i) => selected.has(i));
+    const chosen = events.filter((_, i) => selected[i]);
     if (chosen.length === 0) {
       setError("Select at least one event to save.");
       return;
@@ -111,18 +108,19 @@ function ConfirmEventsModal({ source, events, onClose, onSaved }) {
       >
         <h2>Confirm events from {source.label || source.url}</h2>
         <p>Review what we found. Uncheck anything you don't want to add.</p>
+        {model ? <p className="event-when">Parsed using {model}</p> : null}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "16px 0" }}>
           {events.map((event, index) => (
             <label
-              key={index}
+              key={`${event.title || "untitled"}-${event.date || "no-date"}-${index}`}
               className="source-status-row"
               style={{ alignItems: "flex-start", cursor: "pointer" }}
             >
               <input
                 type="checkbox"
-                checked={selected.has(index)}
-                onChange={() => toggle(index)}
+                checked={selected[index]}
+                onChange={(e) => toggle(index, e.target.checked)}
                 style={{ marginTop: 3 }}
               />
               <div style={{ flex: 1 }}>
@@ -141,7 +139,7 @@ function ConfirmEventsModal({ source, events, onClose, onSaved }) {
             Cancel
           </button>
           <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : `Save ${selected.size} event${selected.size === 1 ? "" : "s"}`}
+            {saving ? "Saving…" : `Save ${selectedCount} event${selectedCount === 1 ? "" : "s"}`}
           </button>
         </div>
       </div>
@@ -157,8 +155,8 @@ function SourceRow({ source, onRemoved, onCheck }) {
     setError("");
     setChecking(true);
     try {
-      const events = await checkSourceForEvents(source);
-      onCheck(source, events);
+      const { events, model } = await checkSourceForEvents(source);
+      onCheck(source, events, model);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -232,8 +230,8 @@ function Sources() {
     setSources((prev) => prev.filter((s) => s.id !== id));
   }
 
-  function handleCheck(source, events) {
-    setPendingReview({ source, events });
+  function handleCheck(source, events, model) {
+    setPendingReview({ source, events, model });
   }
 
   function handleSaved(count) {
@@ -290,6 +288,7 @@ function Sources() {
         <ConfirmEventsModal
           source={pendingReview.source}
           events={pendingReview.events}
+          model={pendingReview.model}
           onClose={() => setPendingReview(null)}
           onSaved={handleSaved}
         />

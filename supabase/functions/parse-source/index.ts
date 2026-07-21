@@ -7,6 +7,7 @@ const corsHeaders = {
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_HTML_BYTES = 2_000_000; // 2MB cap so a huge page can't blow up the function
 const MAX_TEXT_CHARS = 20_000; // cap what we send to the AI
+const AI_MODEL = "gemini-flash-lite-latest";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -152,7 +153,7 @@ Page text:
 ${text.slice(0, MAX_TEXT_CHARS)}`;
 
   const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,7 +206,7 @@ ${text.slice(0, MAX_TEXT_CHARS)}`;
   try {
     const parsed = JSON.parse(cleaned);
     const events = Array.isArray(parsed?.events) ? parsed.events : [];
-    return { ok: true as const, events };
+    return { ok: true as const, events, model: AI_MODEL };
   } catch {
     console.error("Could not parse AI response as JSON:", raw);
     return { ok: false as const, error: "Couldn't understand the AI response." };
@@ -259,5 +260,5 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "No events were found on that page.", events: [] }, 200);
   }
 
-  return jsonResponse({ events: result.events });
+  return jsonResponse({ events: result.events, model: result.model });
 });

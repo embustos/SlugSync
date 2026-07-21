@@ -136,7 +136,7 @@ export async function checkSourceForEvents(source) {
     .update({ last_checked_at: new Date().toISOString() })
     .eq("id", source.id);
 
-  return data.events ?? [];
+  return { events: data.events ?? [], model: data.model ?? null };
 }
 
 // --- 3.3.6 / 3.3.7: confirm + save parsed events ----------------------------
