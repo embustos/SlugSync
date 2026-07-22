@@ -19,6 +19,7 @@ import { matchesPreferences } from "../data/matchesPreferences";
 import { EVENT_VISIBILITY } from "../data/eventVisibility";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { useQuickAdd } from "../context/QuickAddContext";
+import { useAuth } from "../context/AuthContext";
 import { CATEGORY_PALETTE, getCategoryStyle } from "../data/categoryStyles";
 import { firstNameFromEmail } from "../lib/displayName";
 
@@ -212,6 +213,7 @@ function Dashboard() {
     clearPreferences,
   } = useUserPreferences();
   const { registerOpenAdd } = useQuickAdd();
+  const { profile } = useAuth();
 
   // Lets the shared nav's "+ Add event" button reuse this page's own modal.
   useEffect(() => registerOpenAdd(() => openModal()), [registerOpenAdd]);
@@ -492,7 +494,9 @@ function Dashboard() {
   ];
 
   const greeting = greetingForHour(new Date().getHours());
-  const displayName = currentUserEmail ? firstNameFromEmail(currentUserEmail) : null;
+  const displayName =
+    profile?.full_name?.trim() ||
+    (currentUserEmail ? firstNameFromEmail(currentUserEmail) : null);
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -515,7 +519,6 @@ function Dashboard() {
 
       {currentUserId && (
         <DailyDigest
-          communityEvents={[...communityEventsWithoutDuplicates, ...ucscEvents]}
           currentUserId={currentUserId}
           personalEvents={personalEvents}
         />

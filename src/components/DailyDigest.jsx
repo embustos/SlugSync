@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { matchesPreferences } from "../data/matchesPreferences";
 import { getCategoryStyle } from "../data/categoryStyles";
 import {
   DIGEST_RANGE_OPTIONS,
@@ -94,7 +93,7 @@ function DigestWeekGrid({ events }) {
   );
 }
 
-function DailyDigest({ personalEvents, communityEvents, currentUserId }) {
+function DailyDigest({ personalEvents, currentUserId }) {
   const [expanded, setExpanded] = useState(false);
   const [range, setRange] = useState(DIGEST_RANGES.DAILY);
 
@@ -140,16 +139,9 @@ function DailyDigest({ personalEvents, communityEvents, currentUserId }) {
     };
   }, [currentUserId]);
 
-  const rangeEvents = sortByDate([
-    ...filterEventsInRange(personalEvents, range),
-    ...filterEventsInRange(communityEvents, range).filter((event) =>
-      matchesPreferences(event, {
-        clubs: interests.clubs,
-        classes: interests.classes,
-        categories: [],
-      }),
-    ),
-  ]);
+  // Only events on the user's own calendar — community/UCSC events the user
+  // added are already inserted as personal rows, so they're included here.
+  const rangeEvents = sortByDate(filterEventsInRange(personalEvents, range));
 
   // Fresh AI call whenever the panel opens or the range changes — no caching.
   useEffect(() => {
@@ -207,11 +199,11 @@ function DailyDigest({ personalEvents, communityEvents, currentUserId }) {
     return () => {
       cancelled = true;
     };
-    // rangeEvents/interests are derived from personalEvents/communityEvents/range,
+    // rangeEvents/interests are derived from personalEvents/range,
     // already covered by those deps — omitting them keeps this to one call per
     // open/range change instead of refiring on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expanded, range, profileLoaded, personalEvents, communityEvents]);
+  }, [expanded, range, profileLoaded, personalEvents]);
 
   // A stale thread from a different range is confusing, so clear the Q&A
   // conversation whenever the selected period changes.

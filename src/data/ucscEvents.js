@@ -63,7 +63,7 @@ export function normalizeUcscEvent(raw) {
     sortTime,
     sortEndTime,
     location: formatVenue(raw.venue),
-    description: stripHtml(raw.description).slice(0, 240),
+    description: stripHtml(raw.description),
     source: "UCSC Events",
     sourceUrl: raw.url ?? null,
     visibility: "community",
