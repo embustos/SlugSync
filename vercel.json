@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/ucsc-events",
+      "destination": "https://events.ucsc.edu/wp-json/tribe/events/v1/events"
+    }
+  ]
+}
